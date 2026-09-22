@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-geodiff-review = "geodiff_review:main"
+geodiff-review = "geodiff_review.cli:main"
 
 [build-system]
 requires = ["hatchling"]
