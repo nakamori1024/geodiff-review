@@ -1,0 +1,12 @@
+{
+  "ruff.nativeServer": "on",
+  "python.analysis.typeCheckingMode": "basic",
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.autoFix": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  }
+}
