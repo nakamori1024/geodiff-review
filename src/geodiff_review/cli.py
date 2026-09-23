@@ -6,7 +6,7 @@ from pathlib import Path
 
 from geodiff_review.diff import create_changeset, list_changes
 from geodiff_review.inspect import read_schema
-from geodiff_review.normalize import column_names, normalize_entry
+from geodiff_review.normalize import column_names, normalize_entry, primary_key_name
 
 
 def parse_args(argv=None):
@@ -43,7 +43,10 @@ def parse_args(argv=None):
 
 
 def compute_diff(
-    before: Path, after: Path, names_map: dict[str, list[str]]
+    before: Path,
+    after: Path,
+    names_map: dict[str, list[str]],
+    pk_map: dict[str, str | None],
 ) -> list[dict]:
     with tempfile.TemporaryDirectory() as tmpdir:
         changeset = Path(tmpdir) / "changeset.bin"
@@ -51,7 +54,10 @@ def compute_diff(
         if count == 0:
             return []
         changes = list_changes(changeset)
-        return [normalize_entry(e, names_map[e["table"]]) for e in changes]
+        return [
+            normalize_entry(e, names_map[e["table"]], pk_map[e["table"]])
+            for e in changes
+        ]
 
 
 def summarize(normalized: list[dict]) -> Counter[tuple[str, str]]:
@@ -59,6 +65,7 @@ def summarize(normalized: list[dict]) -> Counter[tuple[str, str]]:
 
 
 def main(argv=None) -> int:
+    # Parse arguments and validate input paths
     args = parse_args(argv)
 
     for label, path in (("--before", args.before), ("--after", args.after)):
@@ -66,19 +73,26 @@ def main(argv=None) -> int:
             print(f"error: {label} not found: {path}")
             return 1
 
+    # Read schemas from both GeoPackages
     before_schema = read_schema(args.before)
     after_schema = read_schema(args.after)
 
     print(f"before: {args.before} ({len(before_schema)} tables)")
     print(f"after : {args.after} ({len(after_schema)} tables)")
 
+    # Build lookup maps for column names and primary keys per table
     names_map = {s["table"]: column_names(s) for s in before_schema}
-    normalized = compute_diff(args.before, args.after, names_map)
+    pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
+
+    # Compute and normalize diff between the two GeoPackages
+    normalized = compute_diff(args.before, args.after, names_map, pk_map)
     print(f"changes: {len(normalized)}")
 
+    # Print summary grouped by table and change type
     for (table, change_type), n in sorted(summarize(normalized).items()):
         print(f"  {table}: {n} {change_type}(s)")
 
+    # Write normalized diff as JSON if requested
     if args.json_path:
         args.json_path.write_text(
             json.dumps(normalized, ensure_ascii=False, indent=2),
