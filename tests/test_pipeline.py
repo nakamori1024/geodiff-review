@@ -1,10 +1,10 @@
-from geodiff_review.cli import compute_diff
 from geodiff_review.inspect import read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
     primary_key_name,
 )
+from geodiff_review.pipeline import compute_diff
 
 
 def test_compute_diff_includes_rows(before_gpkg, after_gpkg):
