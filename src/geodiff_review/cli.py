@@ -1,10 +1,12 @@
 import argparse
+import json
 import tempfile
 from collections import Counter
 from pathlib import Path
 
 from geodiff_review.diff import create_changeset, list_changes
 from geodiff_review.inspect import read_schema
+from geodiff_review.normalize import column_names, normalize_entry
 
 
 def parse_args(argv=None):
@@ -54,6 +56,8 @@ def main(argv=None) -> int:
     print(f"before: {args.before} ({len(before_schema)} tables)")
     print(f"after : {args.after} ({len(after_schema)} tables)")
 
+    names_map = {s["table"]: column_names(s) for s in before_schema}
+
     with tempfile.TemporaryDirectory() as tmpdir:
         changeset = Path(tmpdir) / "changeset.bin"
         count = create_changeset(args.before, args.after, changeset)
@@ -61,11 +65,20 @@ def main(argv=None) -> int:
 
         if count > 0:
             changes = list_changes(changeset)
+            normalized = []
             summary: Counter[tuple[str, str]] = Counter()
             for entry in changes:
+                normalized.append(normalize_entry(entry, names_map[entry["table"]]))
                 summary[(entry["table"], entry["type"])] += 1
             for (table, change_type), n in sorted(summary.items()):
                 print(f"  {table}: {n} {change_type}(s)")
+
+            if args.json_path:
+                args.json_path.write_text(
+                    json.dumps(normalized, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                print(f"json: {args.json_path}")
 
     print(f"output: {args.output}")
     return 0
