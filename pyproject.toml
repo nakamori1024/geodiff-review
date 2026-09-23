@@ -20,5 +20,6 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "pyogrio==0.13.0",
     "ruff>=0.16.8",
 ]
