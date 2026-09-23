@@ -23,6 +23,7 @@ def normalize_entry(
         "table": entry["table"],
         "type": entry["type"],
         "pk": None,
+        "row": None,
         "changes": {
             "geometry": None,
             "fields": [],

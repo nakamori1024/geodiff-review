@@ -1,17 +1,14 @@
 import argparse
 import json
-import tempfile
-from collections import Counter
 from pathlib import Path
 
-from geodiff_review.diff import create_changeset, list_changes
 from geodiff_review.inspect import read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
-    normalize_entry,
     primary_key_name,
 )
+from geodiff_review.pipeline import compute_diff, summarize
 
 
 def parse_args(argv=None):
@@ -45,31 +42,6 @@ def parse_args(argv=None):
         help="open the generated HTML in a browser",
     )
     return p.parse_args(argv)
-
-
-def compute_diff(
-    before: Path,
-    after: Path,
-    names_map: dict[str, list[str]],
-    pk_map: dict[str, str | None],
-    geom_map: dict[str, str | None],
-) -> list[dict]:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        changeset = Path(tmpdir) / "changeset.bin"
-        count = create_changeset(before, after, changeset)
-        if count == 0:
-            return []
-        changes = list_changes(changeset)
-        return [
-            normalize_entry(
-                e, names_map[e["table"]], pk_map[e["table"]], geom_map[e["table"]]
-            )
-            for e in changes
-        ]
-
-
-def summarize(normalized: list[dict]) -> Counter[tuple[str, str]]:
-    return Counter((e["table"], e["type"]) for e in normalized)
 
 
 def main(argv=None) -> int:
