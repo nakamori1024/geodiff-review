@@ -1,6 +1,9 @@
 import argparse
+import tempfile
+from collections import Counter
 from pathlib import Path
 
+from geodiff_review.diff import create_changeset, list_changes
 from geodiff_review.inspect import read_schema
 
 
@@ -50,5 +53,19 @@ def main(argv=None) -> int:
 
     print(f"before: {args.before} ({len(before_schema)} tables)")
     print(f"after : {args.after} ({len(after_schema)} tables)")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        changeset = Path(tmpdir) / "changeset.bin"
+        count = create_changeset(args.before, args.after, changeset)
+        print(f"changes: {count}")
+
+        if count > 0:
+            changes = list_changes(changeset)
+            summary: Counter[tuple[str, str]] = Counter()
+            for entry in changes:
+                summary[(entry["table"], entry["type"])] += 1
+            for (table, change_type), n in sorted(summary.items()):
+                print(f"  {table}: {n} {change_type}(s)")
+
     print(f"output: {args.output}")
     return 0
