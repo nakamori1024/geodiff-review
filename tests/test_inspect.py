@@ -1,4 +1,3 @@
-# tests/test_inspect.py
 from geodiff_review.inspect import read_schema
 
 
