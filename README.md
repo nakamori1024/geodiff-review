@@ -4,7 +4,7 @@ A CLI tool for detecting and reviewing differences in GeoPackage files.
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
 
 ## Setup

@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "nakamori1024", email = "nakamori@mierune.co.jp" }
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "pygeodiff==2.3.1",
 ]
