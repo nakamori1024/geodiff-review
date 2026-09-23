@@ -1,6 +1,8 @@
 import argparse
 from pathlib import Path
 
+from geodiff_review.inspect import read_schema
+
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser(
@@ -43,7 +45,10 @@ def main(argv=None) -> int:
             print(f"error: {label} not found: {path}")
             return 1
 
-    print(f"before: {args.before}")
-    print(f"after : {args.after}")
+    before_schema = read_schema(args.before)
+    after_schema = read_schema(args.after)
+
+    print(f"before: {args.before} ({len(before_schema)} tables)")
+    print(f"after : {args.after} ({len(after_schema)} tables)")
     print(f"output: {args.output}")
     return 0
