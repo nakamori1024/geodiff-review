@@ -18,8 +18,12 @@ geodiff-review = "geodiff_review.cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [dependency-groups]
 dev = [
     "pyogrio==0.13.0",
+    "pytest==9.1.1",
     "ruff>=0.16.8",
 ]
