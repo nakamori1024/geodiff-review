@@ -23,8 +23,10 @@ def normalize_entry(
         "table": entry["table"],
         "type": entry["type"],
         "pk": None,
-        "geometry_changed": None,
-        "changes": [],
+        "changes": {
+            "geometry": None,
+            "fields": [],
+        },
     }
     for ch in entry["changes"]:
         name = names[ch["column"]]
@@ -35,11 +37,13 @@ def normalize_entry(
                 "value": before if before is not None else after,
             }
         elif name == geom:
-            out["geometry_changed"] = {
+            out["changes"]["geometry"] = {
                 "column": name,
                 "before": before,
                 "after": after,
             }
         else:
-            out["changes"].append({"column": name, "before": before, "after": after})
+            out["changes"]["fields"].append(
+                {"column": name, "before": before, "after": after}
+            )
     return out
