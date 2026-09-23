@@ -79,7 +79,7 @@ def main(argv=None) -> int:
     for (table, change_type), n in sorted(summarize(normalized).items()):
         print(f"  {table}: {n} {change_type}(s)")
 
-    if args.json_path and normalized:
+    if args.json_path:
         args.json_path.write_text(
             json.dumps(normalized, ensure_ascii=False, indent=2),
             encoding="utf-8",
