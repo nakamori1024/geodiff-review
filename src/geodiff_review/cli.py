@@ -42,6 +42,22 @@ def parse_args(argv=None):
     return p.parse_args(argv)
 
 
+def compute_diff(
+    before: Path, after: Path, names_map: dict[str, list[str]]
+) -> list[dict]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        changeset = Path(tmpdir) / "changeset.bin"
+        count = create_changeset(before, after, changeset)
+        if count == 0:
+            return []
+        changes = list_changes(changeset)
+        return [normalize_entry(e, names_map[e["table"]]) for e in changes]
+
+
+def summarize(normalized: list[dict]) -> Counter[tuple[str, str]]:
+    return Counter((e["table"], e["type"]) for e in normalized)
+
+
 def main(argv=None) -> int:
     args = parse_args(argv)
 
@@ -57,28 +73,18 @@ def main(argv=None) -> int:
     print(f"after : {args.after} ({len(after_schema)} tables)")
 
     names_map = {s["table"]: column_names(s) for s in before_schema}
+    normalized = compute_diff(args.before, args.after, names_map)
+    print(f"changes: {len(normalized)}")
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        changeset = Path(tmpdir) / "changeset.bin"
-        count = create_changeset(args.before, args.after, changeset)
-        print(f"changes: {count}")
+    for (table, change_type), n in sorted(summarize(normalized).items()):
+        print(f"  {table}: {n} {change_type}(s)")
 
-        if count > 0:
-            changes = list_changes(changeset)
-            normalized = []
-            summary: Counter[tuple[str, str]] = Counter()
-            for entry in changes:
-                normalized.append(normalize_entry(entry, names_map[entry["table"]]))
-                summary[(entry["table"], entry["type"])] += 1
-            for (table, change_type), n in sorted(summary.items()):
-                print(f"  {table}: {n} {change_type}(s)")
-
-            if args.json_path:
-                args.json_path.write_text(
-                    json.dumps(normalized, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-                print(f"json: {args.json_path}")
+    if args.json_path and normalized:
+        args.json_path.write_text(
+            json.dumps(normalized, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"json: {args.json_path}")
 
     print(f"output: {args.output}")
     return 0
