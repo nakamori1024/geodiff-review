@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "nakamori1024", email = "nakamori@mierune.co.jp" }
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "pygeodiff==2.3.1",
 ]
@@ -20,5 +20,6 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "pyogrio==0.13.0",
     "ruff>=0.16.8",
 ]
