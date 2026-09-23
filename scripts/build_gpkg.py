@@ -6,7 +6,7 @@ DATA = Path(__file__).parent.parent / "tests" / "data"
 
 
 def geojson_to_gpkg(src, dst, layer="roads"):
-    meta, fids, geom, fdata = read(src)
+    meta, _, geom, fdata = read(src)
     write(
         dst,
         geom,
