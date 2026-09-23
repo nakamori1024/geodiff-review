@@ -6,7 +6,12 @@ from pathlib import Path
 
 from geodiff_review.diff import create_changeset, list_changes
 from geodiff_review.inspect import read_schema
-from geodiff_review.normalize import column_names, normalize_entry, primary_key_name
+from geodiff_review.normalize import (
+    column_names,
+    geometry_column_name,
+    normalize_entry,
+    primary_key_name,
+)
 
 
 def parse_args(argv=None):
@@ -47,6 +52,7 @@ def compute_diff(
     after: Path,
     names_map: dict[str, list[str]],
     pk_map: dict[str, str | None],
+    geom_map: dict[str, str | None],
 ) -> list[dict]:
     with tempfile.TemporaryDirectory() as tmpdir:
         changeset = Path(tmpdir) / "changeset.bin"
@@ -55,7 +61,9 @@ def compute_diff(
             return []
         changes = list_changes(changeset)
         return [
-            normalize_entry(e, names_map[e["table"]], pk_map[e["table"]])
+            normalize_entry(
+                e, names_map[e["table"]], pk_map[e["table"]], geom_map[e["table"]]
+            )
             for e in changes
         ]
 
@@ -80,12 +88,13 @@ def main(argv=None) -> int:
     print(f"before: {args.before} ({len(before_schema)} tables)")
     print(f"after : {args.after} ({len(after_schema)} tables)")
 
-    # Build lookup maps for column names and primary keys per table
+    # Build lookup maps for column names, primary keys, and geometry per table
     names_map = {s["table"]: column_names(s) for s in before_schema}
     pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
+    geom_map = {s["table"]: geometry_column_name(s) for s in before_schema}
 
     # Compute and normalize diff between the two GeoPackages
-    normalized = compute_diff(args.before, args.after, names_map, pk_map)
+    normalized = compute_diff(args.before, args.after, names_map, pk_map, geom_map)
     print(f"changes: {len(normalized)}")
 
     # Print summary grouped by table and change type

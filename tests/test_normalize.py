@@ -1,6 +1,11 @@
 from geodiff_review.diff import create_changeset, list_changes
 from geodiff_review.inspect import read_schema
-from geodiff_review.normalize import column_names, normalize_entry, primary_key_name
+from geodiff_review.normalize import (
+    column_names,
+    geometry_column_name,
+    normalize_entry,
+    primary_key_name,
+)
 
 
 def test_column_names(before_gpkg):
@@ -22,13 +27,18 @@ def test_primary_key_name(before_gpkg):
     assert primary_key_name(read_schema(before_gpkg)[0]) == "id"
 
 
+def test_geometry_column_name(before_gpkg):
+    assert geometry_column_name(read_schema(before_gpkg)[0]) == "geom"
+
+
 def test_normalize_entry_update(before_gpkg, after_gpkg, tmp_path):
     schema = read_schema(before_gpkg)[0]
     names = column_names(schema)
     pk = primary_key_name(schema)
+    geom = geometry_column_name(schema)
     out = tmp_path / "changeset.bin"
     create_changeset(before_gpkg, after_gpkg, out)
-    normalized = [normalize_entry(e, names, pk) for e in list_changes(out)]
+    normalized = [normalize_entry(e, names, pk, geom) for e in list_changes(out)]
 
     target = [
         e
@@ -38,6 +48,8 @@ def test_normalize_entry_update(before_gpkg, after_gpkg, tmp_path):
     ]
     assert len(target) == 1
     assert target[0]["pk"] == {"column": "id", "value": 511}
+    assert target[0]["geometry_changed"] is None
     changed = {c["column"]: (c["before"], c["after"]) for c in target[0]["changes"]}
     assert "id" not in changed
+    assert "geom" not in changed
     assert changed["width_max"] == (18.45, 18.02)
