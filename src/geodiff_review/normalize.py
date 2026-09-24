@@ -43,8 +43,8 @@ def normalize_entry(
         elif name == geom:
             out["changes"]["geometry"] = {
                 "column": name,
-                "before": decode_gpkg_blob(before) if before else None,
-                "after": decode_gpkg_blob(after) if after else None,
+                "before": decode_gpkg_blob(before) if before is not None else None,
+                "after": decode_gpkg_blob(after) if after is not None else None,
             }
         else:
             out["changes"]["fields"].append(
