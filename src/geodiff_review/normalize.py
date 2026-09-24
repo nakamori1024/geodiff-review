@@ -1,3 +1,6 @@
+from geodiff_review.geometry import decode_gpkg_blob
+
+
 def column_names(schema: dict) -> list[str]:
     return [c["name"] for c in schema["columns"]]
 
@@ -40,8 +43,8 @@ def normalize_entry(
         elif name == geom:
             out["changes"]["geometry"] = {
                 "column": name,
-                "before": before,
-                "after": after,
+                "before": decode_gpkg_blob(before) if before is not None else None,
+                "after": decode_gpkg_blob(after) if after is not None else None,
             }
         else:
             out["changes"]["fields"].append(
