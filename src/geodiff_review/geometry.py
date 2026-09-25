@@ -1,5 +1,3 @@
-import base64
-
 from shapely import from_wkb
 from shapely.geometry import mapping
 
@@ -18,7 +16,3 @@ def decode_gpkg_bytes(raw: bytes) -> dict | None:
         return None
 
     return mapping(from_wkb(raw[8 + _ENVELOPE_SIZE[envelope] :]))
-
-
-def decode_gpkg_blob(b64: str) -> dict | None:
-    return decode_gpkg_bytes(base64.b64decode(b64))
