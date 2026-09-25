@@ -6,12 +6,13 @@ MAX_LEN = 20
 _CSS = """\
 body { font-family: sans-serif; font-size: 13px; }
 table { border-collapse: collapse; }
-th, td { padding: 2px 8px; border: 1px solid #d0d7de; white-space: nowrap; }
+th, td { padding: 2px 8px; border: 1px solid #8c959f; white-space: nowrap; }
 th { background: #f6f8fa; text-align: left; }
 tr.add td { background: #e6ffec; }
 tr.del td { background: #ffebe9; }
 tr.add td.changed { background: #abf2bc; }
 tr.del td.changed { background: #ffc0c0; }
+tr.del:not(.pair-end) td { border-bottom-color: #d0d7de; }
 """
 
 
@@ -71,8 +72,13 @@ def render_html(
 
         for entry in sorted(group, key=lambda e: e["pk"]["value"]):
             changed = set(entry["changes"])
-            for mark, cls, row_data in _rows_for(entry):
-                parts.append(f'<tr class="{cls}">')
+            if entry["type"] in ("insert", "delete"):
+                changed.add(entry["pk"]["column"])
+            rows = _rows_for(entry)
+            for i, (mark, cls, row_data) in enumerate(rows):
+                is_last = i == len(rows) - 1
+                tr_cls = f"{cls} pair-end" if is_last else cls
+                parts.append(f'<tr class="{tr_cls}">')
                 parts.append(f"<td>{mark}</td>")
                 for c in cols:
                     td_cls = ' class="changed"' if c in changed else ""

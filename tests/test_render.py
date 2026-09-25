@@ -19,5 +19,5 @@ def test_render_html_contains_rows(before_gpkg, after_gpkg):
 
     assert "<table" in out
     assert "北１条東１８丁目線" in out
-    assert out.count('class="add"') == 38  # insert 4 + update 34
-    assert out.count('class="del"') == 35  # delete 1 + update 34
+    assert out.count('class="add') == 38  # insert 4 + update 34
+    assert out.count('class="del') == 35  # delete 1 + update 34
