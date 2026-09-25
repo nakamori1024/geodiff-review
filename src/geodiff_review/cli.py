@@ -1,5 +1,6 @@
 import argparse
 import json
+import webbrowser
 from pathlib import Path
 
 from geodiff_review.inspect import read_schema
@@ -9,6 +10,7 @@ from geodiff_review.normalize import (
     primary_key_name,
 )
 from geodiff_review.pipeline import compute_diff, summarize
+from geodiff_review.render import render_html
 
 
 def parse_args(argv=None):
@@ -81,5 +83,11 @@ def main(argv=None) -> int:
         )
         print(f"json: {args.json_path}")
 
+    html_text = render_html(normalized, names_map, geom_map)
+    args.output.write_text(html_text, encoding="utf-8")
     print(f"output: {args.output}")
+
+    if args.open_browser:
+        webbrowser.open(args.output.resolve().as_uri())
+
     return 0
