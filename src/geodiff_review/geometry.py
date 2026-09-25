@@ -6,8 +6,7 @@ from shapely.geometry import mapping
 _ENVELOPE_SIZE = {0: 0, 1: 32, 2: 48, 3: 48, 4: 64}
 
 
-def decode_gpkg_blob(b64: str) -> dict | None:
-    raw = base64.b64decode(b64)
+def decode_gpkg_bytes(raw: bytes) -> dict | None:
     if raw[:2] != b"GP":
         raise ValueError("not a GeoPackage binary blob")
 
@@ -18,5 +17,8 @@ def decode_gpkg_blob(b64: str) -> dict | None:
     if (flags >> 4) & 0x01:  # empty geometry
         return None
 
-    wkb = raw[8 + _ENVELOPE_SIZE[envelope] :]
-    return mapping(from_wkb(wkb))
+    return mapping(from_wkb(raw[8 + _ENVELOPE_SIZE[envelope] :]))
+
+
+def decode_gpkg_blob(b64: str) -> dict | None:
+    return decode_gpkg_bytes(base64.b64decode(b64))
