@@ -1,6 +1,3 @@
-from geodiff_review.geometry import decode_gpkg_blob
-
-
 def column_names(schema: dict) -> list[str]:
     return [c["name"] for c in schema["columns"]]
 
@@ -19,35 +16,21 @@ def geometry_column_name(schema: dict) -> str | None:
     return None
 
 
-def normalize_entry(
-    entry: dict, names: list[str], pk: str | None = None, geom: str | None = None
-) -> dict:
-    out = {
-        "table": entry["table"],
-        "type": entry["type"],
-        "pk": None,
-        "row": None,
-        "changes": {
-            "geometry": None,
-            "fields": [],
-        },
-    }
+def normalize_entry(entry: dict, names: list[str], pk: str | None = None) -> dict:
+    changed = []
+    pk_value = None
     for ch in entry["changes"]:
         name = names[ch["column"]]
-        before, after = ch.get("old"), ch.get("new")
         if name == pk:
-            out["pk"] = {
-                "column": name,
-                "value": before if before is not None else after,
-            }
-        elif name == geom:
-            out["changes"]["geometry"] = {
-                "column": name,
-                "before": decode_gpkg_blob(before) if before is not None else None,
-                "after": decode_gpkg_blob(after) if after is not None else None,
-            }
+            before, after = ch.get("old"), ch.get("new")
+            pk_value = before if before is not None else after
         else:
-            out["changes"]["fields"].append(
-                {"column": name, "before": before, "after": after}
-            )
-    return out
+            changed.append(name)
+
+    return {
+        "table": entry["table"],
+        "type": entry["type"],
+        "pk": {"column": pk, "value": pk_value} if pk else None,
+        "row": None,
+        "changes": changed,
+    }
