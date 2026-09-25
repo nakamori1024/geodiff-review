@@ -39,21 +39,17 @@ def compute_diff(
             after_pks.setdefault(table, []).append(value)
 
     # Read rows from both GeoPackages
-    def _exclude(table: str) -> list[str]:
-        g = geom_map[table]
-        return [g] if g else []
-
     before_rows: dict[str, dict] = {}
     for t, pks in before_pks.items():
         pk_col = pk_map[t]
         if pk_col is not None:
-            before_rows[t] = read_rows(before, t, pk_col, pks, exclude=_exclude(t))
+            before_rows[t] = read_rows(before, t, pk_col, pks, geom_column=geom_map[t])
 
     after_rows: dict[str, dict] = {}
     for t, pks in after_pks.items():
         pk_col = pk_map[t]
         if pk_col is not None:
-            after_rows[t] = read_rows(after, t, pk_col, pks, exclude=_exclude(t))
+            after_rows[t] = read_rows(after, t, pk_col, pks, geom_column=geom_map[t])
 
     # Attach row data to each normalized entry
     for e in normalized:
