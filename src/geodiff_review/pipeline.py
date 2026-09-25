@@ -21,9 +21,7 @@ def compute_diff(
             return []
         changes = list_changes(changeset)
         normalized = [
-            normalize_entry(
-                e, names_map[e["table"]], pk_map[e["table"]], geom_map[e["table"]]
-            )
+            normalize_entry(e, names_map[e["table"]], pk_map[e["table"]])
             for e in changes
         ]
 
