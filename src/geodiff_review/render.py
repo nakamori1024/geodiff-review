@@ -1,22 +1,21 @@
 import html
 import json
+import re
+from importlib.resources import files
 
 MAX_LEN = 20
 MAPLIBRE_VERSION = "5.4.0"
 BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron"
 
-_CSS = """\
-body { font-family: sans-serif; font-size: 13px; }
-table { border-collapse: collapse; }
-th, td { padding: 2px 8px; border: 1px solid #8c959f; white-space: nowrap; }
-th { background: #f6f8fa; text-align: left; }
-tr.add td { background: #e6ffec; }
-tr.del td { background: #ffebe9; }
-tr.add td.changed { background: #abf2bc; }
-tr.del td.changed { background: #ffc0c0; }
-tr.del:not(.pair-end) td { border-bottom-color: #d0d7de; }
-#map { width: 100%; height: 50vh; }
-"""
+_TEMPLATES = files("geodiff_review") / "templates"
+
+
+def _read(name: str) -> str:
+    return (_TEMPLATES / name).read_text(encoding="utf-8")
+
+
+def _fill(template: str, values: dict[str, str]) -> str:
+    return re.sub(r"__([A-Z][A-Z_]*?)__", lambda m: values[m.group(1)], template)
 
 
 def _cell_text(value) -> str:
@@ -86,66 +85,18 @@ def render_html(
     for e in entries:
         tables.setdefault(e["table"], []).append(e)
 
-    parts: list[str] = []
-    parts.append("<!DOCTYPE html>")
-    parts.append("<html><head><meta charset='utf-8'>")
-    parts.append(
-        f'<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@{MAPLIBRE_VERSION}/dist/maplibre-gl.css">'
-    )
-    parts.append(
-        f'<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@{MAPLIBRE_VERSION}/dist/maplibre-gl.js"></script>'
-    )
-    parts.append(f"<style>{_CSS}</style>")
-    parts.append("</head><body>")
-
-    if geom_map:
-        before_fc, after_fc = _feature_collections(entries, geom_map)
-        before_json = _embed(before_fc)
-        after_json = _embed(after_fc)
-        parts.append('<div id="map"></div>')
-        parts.append("<script>")
-        parts.append(f"const before = {before_json};")
-        parts.append(f"const after = {after_json};")
-        parts.append(f"""
-const map = new maplibregl.Map({{
-  container: 'map',
-  style: '{BASEMAP_STYLE}',
-  center: [0, 0],
-  zoom: 1
-}});
-
-map.on('load', () => {{
-  map.addSource('before', {{ type: 'geojson', data: before }});
-  map.addSource('after',  {{ type: 'geojson', data: after  }});
-
-  map.addLayer({{
-    id: 'before-line', type: 'line', source: 'before',
-    paint: {{ 'line-color': '#cf222e', 'line-width': 8, 'line-opacity': 0.5 }}
-  }});
-  map.addLayer({{
-    id: 'after-line', type: 'line', source: 'after',
-    paint: {{ 'line-color': '#20dd5b', 'line-width': 4 }}
-  }});
-
-  const bounds = new maplibregl.LngLatBounds();
-  for (const fc of [before, after])
-    for (const f of fc.features)
-      for (const part of f.geometry.coordinates)
-        for (const c of part) bounds.extend(c);
-  if (!bounds.isEmpty()) map.fitBounds(bounds, {{ padding: 40 }});
-}});""")
-        parts.append("</script>")
-
+    # Build tables HTML
+    table_parts: list[str] = []
     for table, group in tables.items():
         geom = geom_map.get(table) if geom_map else None
         cols = _reorder_cols(names_map[table], geom)
-        parts.append(f"<h2>{html.escape(table)}</h2>")
-        parts.append("<table>")
-        parts.append("<thead><tr><th></th>")
+        table_parts.append(f"<h2>{html.escape(table)}</h2>")
+        table_parts.append("<table>")
+        table_parts.append("<thead><tr><th></th>")
         for c in cols:
-            parts.append(f"<th>{html.escape(c)}</th>")
-        parts.append("</tr></thead>")
-        parts.append("<tbody>")
+            table_parts.append(f"<th>{html.escape(c)}</th>")
+        table_parts.append("</tr></thead>")
+        table_parts.append("<tbody>")
 
         for entry in sorted(group, key=lambda e: e["pk"]["value"]):
             changed = set(entry["changes"])
@@ -155,15 +106,36 @@ map.on('load', () => {{
             for i, (mark, cls, row_data) in enumerate(rows):
                 is_last = i == len(rows) - 1
                 tr_cls = f"{cls} pair-end" if is_last else cls
-                parts.append(f'<tr class="{tr_cls}">')
-                parts.append(f"<td>{mark}</td>")
+                table_parts.append(f'<tr class="{tr_cls}">')
+                table_parts.append(f"<td>{mark}</td>")
                 for c in cols:
                     td_cls = ' class="changed"' if c in changed else ""
                     val = _cell_text(row_data.get(c))
-                    parts.append(f"<td{td_cls}>{html.escape(val)}</td>")
-                parts.append("</tr>")
+                    table_parts.append(f"<td{td_cls}>{html.escape(val)}</td>")
+                table_parts.append("</tr>")
 
-        parts.append("</tbody></table>")
+        table_parts.append("</tbody></table>")
 
-    parts.append("</body></html>")
-    return "\n".join(parts)
+    # Build map data
+    data: dict = {"map": None}
+    map_html = ""
+    if geom_map:
+        before_fc, after_fc = _feature_collections(entries, geom_map)
+        data["map"] = {
+            "basemap": BASEMAP_STYLE,
+            "before": before_fc,
+            "after": after_fc,
+        }
+        map_html = '<div id="map"></div>'
+
+    return _fill(
+        _read("review.html"),
+        {
+            "MAPLIBRE_VERSION": MAPLIBRE_VERSION,
+            "CSS": _read("review.css"),
+            "JS": _read("review.js"),
+            "MAP": map_html,
+            "TABLES": "\n".join(table_parts),
+            "DATA": _embed(data),
+        },
+    )

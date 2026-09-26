@@ -1,3 +1,5 @@
+import re
+
 from geodiff_review.inspect import read_schema
 from geodiff_review.normalize import (
     column_names,
@@ -21,3 +23,4 @@ def test_render_html_contains_rows(before_gpkg, after_gpkg):
     assert "北１条東１８丁目線" in out
     assert out.count('class="add') == 38  # insert 4 + update 34
     assert out.count('class="del') == 35  # delete 1 + update 34
+    assert not re.search(r"__[A-Z][A-Z_]*__", out)
