@@ -80,7 +80,6 @@ def geojson_to_multi_gpkg(src, dst):
 
 if __name__ == "__main__":
     for year in ("2023", "2025"):
-        geojson_to_gpkg(
-            DATA / f"sapporo_chuo_roads_{year}.geojson",
-            DATA / f"sapporo_chuo_roads_{year}.gpkg",
-        )
+        src = DATA / f"sapporo_chuo_roads_{year}.geojson"
+        geojson_to_gpkg(src, DATA / f"sapporo_chuo_roads_{year}.gpkg")
+        geojson_to_multi_gpkg(src, DATA / f"sapporo_chuo_roads_{year}_multi.gpkg")
