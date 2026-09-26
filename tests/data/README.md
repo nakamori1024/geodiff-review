@@ -26,6 +26,21 @@ Derived from "Sapporo Authorized Road Network Map" (札幌市認定路線網図)
 - **Removed 1 feature (`route_no` = 09203, Nakajimabashi Hodosen) from the 2025 edition**
   for testing the deletion case. No such deletion exists in the original data for this period.
 
+## Multi-table test data
+
+`geojson_to_multi_gpkg` generates a GPKG with 3 tables from the same GeoJSON source:
+
+| Table | Geometry | Derivation |
+|---|---|---|
+| `roads` | MultiLineString | Original road geometries |
+| `road_starts` | Point | First vertex of each road line |
+| `road_buffers` | Polygon | Buffer of each road line (0.00005°, ~4-5m) |
+
+Note: Buffers are computed in EPSG:4326 (degrees), so width varies slightly
+between north-south and east-west directions. This is acceptable for test data.
+
+Expected diff counts: roads=39, road_buffers=39, road_starts=32.
+
 ## Contents
 
 | | |
