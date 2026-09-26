@@ -25,6 +25,7 @@ def geojson_to_gpkg(src, dst, layer="roads"):
 
 
 def geojson_to_multi_gpkg(src, dst):
+    Path(dst).unlink(missing_ok=True)
     meta, _, geom, fdata = read(src)
 
     # roads
