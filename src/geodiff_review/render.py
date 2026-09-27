@@ -41,13 +41,12 @@ def _rows_for(entry: dict) -> list[tuple[str, str, dict]]:
 
 
 def _feature_collections(
-    entries: list[dict], geom_map: dict[str, str | None]
+    entries: list[dict], table: str, geom_col: str
 ) -> tuple[dict, dict]:
     before_features: list[dict] = []
     after_features: list[dict] = []
     for e in entries:
-        geom_col = geom_map.get(e["table"])
-        if not geom_col:
+        if e["table"] != table:
             continue
         pk = e["pk"]["value"]
         for side, bucket in (("before", before_features), ("after", after_features)):
@@ -57,7 +56,11 @@ def _feature_collections(
                     {
                         "type": "Feature",
                         "geometry": row[geom_col],
-                        "properties": {"pk": pk, "type": e["type"]},
+                        "properties": {
+                            "table": table,
+                            "pk": pk,
+                            "type": e["type"],
+                        },
                     }
                 )
     return (
@@ -80,6 +83,7 @@ def render_html(
     entries: list[dict],
     names_map: dict[str, list[str]],
     geom_map: dict[str, str | None] | None = None,
+    kind_map: dict[str, str | None] | None = None,
 ) -> str:
     tables: dict[str, list[dict]] = {}
     for e in entries:
@@ -120,13 +124,27 @@ def render_html(
     data: dict = {"map": None}
     map_html = ""
     if geom_map:
-        before_fc, after_fc = _feature_collections(entries, geom_map)
-        data["map"] = {
-            "basemap": BASEMAP_STYLE,
-            "before": before_fc,
-            "after": after_fc,
-        }
-        map_html = '<div id="map"></div>'
+        layers = []
+        for table in tables:
+            geom_col = geom_map.get(table)
+            kind = kind_map.get(table) if kind_map else None
+            if not geom_col or kind is None:
+                continue
+            before_fc, after_fc = _feature_collections(entries, table, geom_col)
+            layers.append(
+                {
+                    "table": table,
+                    "kind": kind,
+                    "before": before_fc,
+                    "after": after_fc,
+                }
+            )
+        if layers:
+            data["map"] = {
+                "basemap": BASEMAP_STYLE,
+                "layers": layers,
+            }
+            map_html = '<div id="map"></div>'
 
     return _fill(
         _read("review.html"),

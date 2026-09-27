@@ -7,6 +7,7 @@ from geodiff_review.inspect import read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
+    geometry_kind,
     primary_key_name,
 )
 from geodiff_review.pipeline import compute_diff, summarize
@@ -66,6 +67,7 @@ def main(argv=None) -> int:
     names_map = {s["table"]: column_names(s) for s in before_schema}
     pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
     geom_map = {s["table"]: geometry_column_name(s) for s in before_schema}
+    kind_map = {s["table"]: geometry_kind(s) for s in before_schema}
 
     # Compute and normalize diff between the two GeoPackages
     normalized = compute_diff(args.before, args.after, names_map, pk_map, geom_map)
@@ -83,7 +85,7 @@ def main(argv=None) -> int:
         )
         print(f"json: {args.json_path}")
 
-    html_text = render_html(normalized, names_map, geom_map)
+    html_text = render_html(normalized, names_map, geom_map, kind_map)
     args.output.write_text(html_text, encoding="utf-8")
     print(f"output: {args.output}")
 
