@@ -52,4 +52,6 @@ def test_render_multi_layers(before_multi_gpkg, after_multi_gpkg):
     data = json.loads(m.group(1))
     kinds = {l["table"]: l["kind"] for l in data["map"]["layers"]}
     assert kinds == {"roads": "line", "road_starts": "point", "road_buffers": "polygon"}
+    tables_in_order = [l["table"] for l in data["map"]["layers"]]
+    assert tables_in_order == ["road_buffers", "road_starts", "roads"]
     assert not re.search(r"__[A-Z][A-Z_]*__", out)

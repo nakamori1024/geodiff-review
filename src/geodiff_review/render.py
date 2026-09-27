@@ -88,6 +88,7 @@ def render_html(
     tables: dict[str, list[dict]] = {}
     for e in entries:
         tables.setdefault(e["table"], []).append(e)
+    tables = dict(sorted(tables.items()))
 
     # Build tables HTML
     table_parts: list[str] = []

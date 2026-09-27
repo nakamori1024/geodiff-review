@@ -8,3 +8,5 @@ tr.add td.changed { background: #abf2bc; }
 tr.del td.changed { background: #ffc0c0; }
 tr.del:not(.pair-end) td { border-bottom-color: #d0d7de; }
 #map { width: 100%; height: 50vh; }
+.layer-control { padding: 6px 10px; }
+.layer-control label { display: block; cursor: pointer; white-space: nowrap; }
