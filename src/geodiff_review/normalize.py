@@ -16,6 +16,23 @@ def geometry_column_name(schema: dict) -> str | None:
     return None
 
 
+_KINDS = {
+    "POINT": "point",
+    "MULTIPOINT": "point",
+    "LINESTRING": "line",
+    "MULTILINESTRING": "line",
+    "POLYGON": "polygon",
+    "MULTIPOLYGON": "polygon",
+}
+
+
+def geometry_kind(schema: dict) -> str | None:
+    for c in schema["columns"]:
+        if c.get("type") == "geometry":
+            return _KINDS.get(c.get("geometry", {}).get("type", "").upper())
+    return None
+
+
 def normalize_entry(entry: dict, names: list[str], pk: str | None = None) -> dict:
     changed = []
     pk_value = None
