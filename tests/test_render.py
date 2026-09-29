@@ -54,4 +54,11 @@ def test_render_multi_layers(before_multi_gpkg, after_multi_gpkg):
     assert kinds == {"roads": "line", "road_starts": "point", "road_buffers": "polygon"}
     tables_in_order = [l["table"] for l in data["map"]["layers"]]
     assert tables_in_order == ["road_buffers", "road_starts", "roads"]
+
+    # Tab structure
+    tabs = re.findall(r'<button type="button" data-table="([^"]+)"', out)
+    assert tabs == ["road_buffers", "road_starts", "roads"]
+    assert out.count('class="table-panel"') == 3
+    assert out.count(" hidden>") == 2
+
     assert not re.search(r"__[A-Z][A-Z_]*__", out)
