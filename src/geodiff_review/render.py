@@ -115,7 +115,9 @@ def render_html(
         panel_parts.append("</tr></thead>")
         panel_parts.append("<tbody>")
 
+        t = html.escape(table)
         for entry in sorted(group, key=lambda e: e["pk"]["value"]):
+            pk = html.escape(str(entry["pk"]["value"]))
             changed = set(entry["changes"])
             if entry["type"] in ("insert", "delete"):
                 changed.add(entry["pk"]["column"])
@@ -123,7 +125,9 @@ def render_html(
             for i, (mark, cls, row_data) in enumerate(rows):
                 is_last = i == len(rows) - 1
                 tr_cls = f"{cls} pair-end" if is_last else cls
-                panel_parts.append(f'<tr class="{tr_cls}">')
+                panel_parts.append(
+                    f'<tr class="{tr_cls}" data-table="{t}" data-pk="{pk}">'
+                )
                 panel_parts.append(f"<td>{mark}</td>")
                 for c in cols:
                     td_cls = ' class="changed"' if c in changed else ""

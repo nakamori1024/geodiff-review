@@ -1,17 +1,19 @@
 (() => {
   const data = JSON.parse(document.getElementById('geodiff-data').textContent);
-  setupTabs();
-  if (data.map) setupMap(data.map);
+  const tabs = setupTabs();
+  const mapView = data.map ? setupMap(data.map) : null;
+  const selection = setupSelection(tabs, mapView);
+  if (mapView) mapView.bindSelection(selection);
 
   function setupTabs() {
     const buttons = document.querySelectorAll('.tabs button');
     const panels = document.querySelectorAll('.table-panel');
-    for (const b of buttons) {
-      b.addEventListener('click', () => {
-        for (const x of buttons) x.setAttribute('aria-selected', x === b ? 'true' : 'false');
-        for (const p of panels) p.hidden = p.dataset.table !== b.dataset.table;
-      });
+    function select(table) {
+      for (const b of buttons) b.setAttribute('aria-selected', b.dataset.table === table ? 'true' : 'false');
+      for (const p of panels) p.hidden = p.dataset.table !== table;
     }
+    for (const b of buttons) b.addEventListener('click', () => select(b.dataset.table));
+    return { select };
   }
 
   function setupMap(mapData) {
@@ -64,8 +66,31 @@
       ],
     };
 
+    const HIGHLIGHT = {
+      point: {
+        before: [['circle', { 'circle-color': '#ff6666', 'circle-radius': 10, 'circle-opacity': 0.8 }]],
+        after:  [['circle', { 'circle-color': '#66ff66', 'circle-radius': 7 }]],
+      },
+      line: {
+        before: [['line', { 'line-color': '#ff6666', 'line-width': 10, 'line-opacity': 0.8 }]],
+        after:  [['line', { 'line-color': '#66ff66', 'line-width': 6 }]],
+      },
+      polygon: {
+        before: [
+          ['fill', { 'fill-color': '#ff6666', 'fill-opacity': 0.35 }],
+          ['line', { 'line-color': '#ff6666', 'line-width': 4, 'line-opacity': 0.9 }],
+        ],
+        after: [
+          ['fill', { 'fill-color': '#66ff66', 'fill-opacity': 0.35 }],
+          ['line', { 'line-color': '#66ff66', 'line-width': 2.5 }],
+        ],
+      },
+    };
+
     const ORDER = { polygon: 0, line: 1, point: 2 };
     const layerIds = {};
+    const hlIds = [];
+    const regularIds = [];
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -79,6 +104,15 @@
       else for (const c of coords) eachCoord(c, fn);
     }
 
+    // Build feature index: index[table][String(pk)] = [feature, ...]
+    const index = {};
+    for (const l of mapData.layers)
+      for (const fc of [l.before, l.after])
+        for (const f of fc.features)
+          ((index[l.table] ??= {})[String(f.properties.pk)] ??= []).push(f);
+
+    let ready = false;
+
     map.on('load', () => {
       const layers = [...mapData.layers].sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
       for (const l of layers) {
@@ -89,7 +123,20 @@
           const id = `${l.table}:${side}:${type}:${i}`;
           map.addLayer({ id, type, source: `${l.table}:${side}`, paint });
           layerIds[l.table].push(id);
+          regularIds.push(id);
         });
+      }
+
+      // Add highlight layers on top of all regular layers
+      for (const l of layers) {
+        for (const side of ['before', 'after']) {
+          HIGHLIGHT[l.kind][side].forEach(([type, paint], i) => {
+            const id = `${l.table}:${side}:highlight:${i}`;
+            map.addLayer({ id, type, source: `${l.table}:${side}`, paint,
+                           layout: { visibility: 'none' } });
+            hlIds.push({ id, table: l.table });
+          });
+        }
       }
 
       map.addControl(new LayerControl(mapData.layers, layerIds), 'top-right');
@@ -100,6 +147,71 @@
           for (const f of fc.features)
             eachCoord(f.geometry.coordinates, c => bounds.extend(c));
       if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 40 });
+
+      ready = true;
     });
+
+    function highlight(table, pk, { zoom = true } = {}) {
+      if (!ready) return;
+      for (const { id, table: t } of hlIds) {
+        if (t === table) {
+          map.setFilter(id, ['==', ['to-string', ['get', 'pk']], pk]);
+          map.setLayoutProperty(id, 'visibility', 'visible');
+        } else {
+          map.setLayoutProperty(id, 'visibility', 'none');
+        }
+      }
+      if (zoom) {
+        const feats = index[table]?.[pk] ?? [];
+        const b = new maplibregl.LngLatBounds();
+        for (const f of feats) eachCoord(f.geometry.coordinates, c => b.extend(c));
+        if (!b.isEmpty()) map.fitBounds(b, { padding: 80, maxZoom: 18 });
+      }
+    }
+
+    function clear() {
+      if (!ready) return;
+      for (const { id } of hlIds) map.setLayoutProperty(id, 'visibility', 'none');
+    }
+
+    function bindSelection(selection) {
+      map.on('click', (e) => {
+        if (!ready) return;
+        const features = map.queryRenderedFeatures(e.point, { layers: regularIds });
+        if (features.length === 0) {
+          selection.clear();
+          return;
+        }
+        const f = features[0];
+        const table = f.properties.table;
+        const pk = String(f.properties.pk);
+        selection.select(table, pk, { zoom: false, scroll: true });
+      });
+    }
+
+    return { highlight, clear, bindSelection };
+  }
+
+  function setupSelection(tabs, mapView) {
+    function select(table, pk, { zoom = true, scroll = false } = {}) {
+      for (const r of document.querySelectorAll('tr.selected')) r.classList.remove('selected');
+      const rows = document.querySelectorAll(
+        `tr[data-table="${CSS.escape(table)}"][data-pk="${CSS.escape(pk)}"]`);
+      for (const r of rows) r.classList.add('selected');
+      tabs.select(table);
+      mapView?.highlight(table, pk, { zoom });
+      if (scroll && rows.length) rows[0].scrollIntoView({ block: 'center' });
+    }
+
+    function clear() {
+      for (const r of document.querySelectorAll('tr.selected')) r.classList.remove('selected');
+      mapView?.clear();
+    }
+
+    for (const tr of document.querySelectorAll('tr[data-pk]')) {
+      tr.addEventListener('click', () => select(tr.dataset.table, tr.dataset.pk));
+    }
+
+    return { select, clear };
   }
 })();
