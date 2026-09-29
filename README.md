@@ -1,6 +1,11 @@
 # geodiff-review
 
 A CLI tool for detecting and reviewing differences in GeoPackage files.
+Generates a single-file HTML report with diff tables and an interactive map
+(the map requires internet access for MapLibre GL JS and OpenFreeMap basemap tiles).
+
+This tool uses [geodiff](https://github.com/MerginMaps/geodiff) by Mergin Maps
+to compute differences. It is not affiliated with the geodiff project.
 
 ## Requirements
 
@@ -16,8 +21,44 @@ uv sync
 ## Usage
 
 ```bash
-uv run geodiff-review
+uv run geodiff-review --before before.gpkg --after after.gpkg
 ```
+
+This generates `review.html` with:
+
+- Diff tables for each table in the GeoPackage (insert/delete/update with changed cells highlighted)
+- An interactive map (MapLibre GL JS) showing before (red) and after (green) geometries
+- Layer toggle controls for showing/hiding individual tables on the map
+
+### Options
+
+| Option | Description |
+|---|---|
+| `--before` | GeoPackage before changes (required) |
+| `--after` | GeoPackage after changes (required) |
+| `-o`, `--output` | Output HTML path (default: `review.html`) |
+| `--json` | Also write the normalized diff as JSON |
+| `--open` | Open the generated HTML in a browser |
+
+### Examples
+
+```bash
+# Generate HTML and open in browser
+uv run geodiff-review --before before.gpkg --after after.gpkg --open
+
+# Also export JSON
+uv run geodiff-review --before before.gpkg --after after.gpkg --json diff.json
+```
+
+## Supported geometry types
+
+| Geometry type | Map rendering |
+|---|---|
+| Point / MultiPoint | Circle |
+| LineString / MultiLineString | Line |
+| Polygon / MultiPolygon | Fill + stroke |
+
+Tables with unsupported or mixed geometry types are shown in the diff table only (no map layer).
 
 ## Development
 
@@ -27,6 +68,14 @@ Generate GPKG from GeoJSON:
 
 ```bash
 uv run python scripts/build_gpkg.py
+```
+
+This creates single-table and multi-table (roads, road_starts, road_buffers) GPKGs from the test GeoJSON data.
+
+### Running tests
+
+```bash
+uv run pytest
 ```
 
 ### Lint / Format
