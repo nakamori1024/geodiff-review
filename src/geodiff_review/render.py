@@ -90,18 +90,30 @@ def render_html(
         tables.setdefault(e["table"], []).append(e)
     tables = dict(sorted(tables.items()))
 
-    # Build tables HTML
-    table_parts: list[str] = []
-    for table, group in tables.items():
+    # Build tabs and table panels
+    tab_buttons: list[str] = []
+    panel_parts: list[str] = []
+    for idx, (table, group) in enumerate(tables.items()):
+        selected = "true" if idx == 0 else "false"
+        hidden = "" if idx == 0 else " hidden"
+        tab_buttons.append(
+            f'<button type="button" data-table="{html.escape(table)}"'
+            f' aria-selected="{selected}">'
+            f"{html.escape(table)}"
+            f' <span class="count">{len(group)}</span></button>'
+        )
+
         geom = geom_map.get(table) if geom_map else None
         cols = _reorder_cols(names_map[table], geom)
-        table_parts.append(f"<h2>{html.escape(table)}</h2>")
-        table_parts.append("<table>")
-        table_parts.append("<thead><tr><th></th>")
+        panel_parts.append(
+            f'<section class="table-panel" data-table="{html.escape(table)}"{hidden}>'
+        )
+        panel_parts.append("<table>")
+        panel_parts.append("<thead><tr><th></th>")
         for c in cols:
-            table_parts.append(f"<th>{html.escape(c)}</th>")
-        table_parts.append("</tr></thead>")
-        table_parts.append("<tbody>")
+            panel_parts.append(f"<th>{html.escape(c)}</th>")
+        panel_parts.append("</tr></thead>")
+        panel_parts.append("<tbody>")
 
         for entry in sorted(group, key=lambda e: e["pk"]["value"]):
             changed = set(entry["changes"])
@@ -111,15 +123,24 @@ def render_html(
             for i, (mark, cls, row_data) in enumerate(rows):
                 is_last = i == len(rows) - 1
                 tr_cls = f"{cls} pair-end" if is_last else cls
-                table_parts.append(f'<tr class="{tr_cls}">')
-                table_parts.append(f"<td>{mark}</td>")
+                panel_parts.append(f'<tr class="{tr_cls}">')
+                panel_parts.append(f"<td>{mark}</td>")
                 for c in cols:
                     td_cls = ' class="changed"' if c in changed else ""
                     val = _cell_text(row_data.get(c))
-                    table_parts.append(f"<td{td_cls}>{html.escape(val)}</td>")
-                table_parts.append("</tr>")
+                    panel_parts.append(f"<td{td_cls}>{html.escape(val)}</td>")
+                panel_parts.append("</tr>")
 
-        table_parts.append("</tbody></table>")
+        panel_parts.append("</tbody></table></section>")
+
+    table_area = (
+        '<div class="table-area">\n'
+        '<nav class="tabs">\n'
+        + "\n".join(tab_buttons)
+        + "\n</nav>\n"
+        + "\n".join(panel_parts)
+        + "\n</div>"
+    )
 
     # Build map data
     data: dict = {"map": None}
@@ -154,7 +175,7 @@ def render_html(
             "CSS": _read("review.css"),
             "JS": _read("review.js"),
             "MAP": map_html,
-            "TABLES": "\n".join(table_parts),
+            "TABLES": table_area,
             "DATA": _embed(data),
         },
     )
