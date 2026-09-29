@@ -185,7 +185,7 @@
         const f = features[0];
         const table = f.properties.table;
         const pk = String(f.properties.pk);
-        selection.select(table, pk, { zoom: false });
+        selection.select(table, pk, { zoom: false, scroll: true });
       });
     }
 
@@ -193,14 +193,14 @@
   }
 
   function setupSelection(tabs, mapView) {
-    function select(table, pk, { zoom = true } = {}) {
+    function select(table, pk, { zoom = true, scroll = false } = {}) {
       for (const r of document.querySelectorAll('tr.selected')) r.classList.remove('selected');
       const rows = document.querySelectorAll(
         `tr[data-table="${CSS.escape(table)}"][data-pk="${CSS.escape(pk)}"]`);
       for (const r of rows) r.classList.add('selected');
       tabs.select(table);
       mapView?.highlight(table, pk, { zoom });
-      if (rows.length) rows[0].scrollIntoView({ block: 'center' });
+      if (scroll && rows.length) rows[0].scrollIntoView({ block: 'center' });
     }
 
     function clear() {
