@@ -1,7 +1,7 @@
 [project]
 name = "geodiff-review"
 version = "0.1.0"
-description = "Add your description here"
+description = "Generate an interactive HTML review page from two GeoPackage files"
 readme = "README.md"
 authors = [
     { name = "nakamori1024", email = "nakamori@mierune.co.jp" }

@@ -27,8 +27,10 @@ uv run geodiff-review --before before.gpkg --after after.gpkg
 This generates `review.html` with:
 
 - Diff tables for each table in the GeoPackage (insert/delete/update with changed cells highlighted)
+- Tabbed panels when the GeoPackage contains multiple tables
 - An interactive map (MapLibre GL JS) showing before (red) and after (green) geometries
 - Layer toggle controls for showing/hiding individual tables on the map
+- Bidirectional selection between table rows and map features
 
 ### Options
 
