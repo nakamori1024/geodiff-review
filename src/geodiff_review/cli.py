@@ -37,7 +37,13 @@ def parse_args(argv=None):
         default=None,
         help="also write the normalized diff as JSON",
     )
-    p.add_argument("--table", default=None, help="limit comparison to a single table")
+    p.add_argument(
+        "--table",
+        dest="tables",
+        action="append",
+        metavar="TABLE",
+        help="limit comparison to the given table (can be repeated)",
+    )
     p.add_argument(
         "--open",
         dest="open_browser",
@@ -60,6 +66,19 @@ def main(argv=None) -> int:
     before_schema = read_schema(args.before)
     after_schema = read_schema(args.after)
 
+    # Validate and filter by --table if specified
+    if args.tables:
+        available = {s["table"] for s in before_schema} & {
+            s["table"] for s in after_schema
+        }
+        unknown = [t for t in args.tables if t not in available]
+        if unknown:
+            print(f"error: table not found: {', '.join(unknown)}")
+            print(f"available tables: {', '.join(sorted(available))}")
+            return 1
+        before_schema = [s for s in before_schema if s["table"] in args.tables]
+        after_schema = [s for s in after_schema if s["table"] in args.tables]
+
     print(f"before: {args.before} ({len(before_schema)} tables)")
     print(f"after : {args.after} ({len(after_schema)} tables)")
 
@@ -70,7 +89,9 @@ def main(argv=None) -> int:
     kind_map = {s["table"]: geometry_kind(s) for s in before_schema}
 
     # Compute and normalize diff between the two GeoPackages
-    normalized = compute_diff(args.before, args.after, names_map, pk_map, geom_map)
+    normalized = compute_diff(
+        args.before, args.after, names_map, pk_map, geom_map, tables=args.tables
+    )
     print(f"changes: {len(normalized)}")
 
     # Print summary grouped by table and change type

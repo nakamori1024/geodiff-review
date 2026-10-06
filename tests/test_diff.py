@@ -21,3 +21,15 @@ def test_list_changes(before_gpkg, after_gpkg, tmp_path):
         "delete": 1,
     }
     assert {c["table"] for c in changes} == {"roads"}
+
+
+def test_create_changeset_with_tables(before_multi_gpkg, after_multi_gpkg, tmp_path):
+    out = tmp_path / "c.diff"
+    assert create_changeset(before_multi_gpkg, after_multi_gpkg, out) == 110
+    assert create_changeset(before_multi_gpkg, after_multi_gpkg, out, ["roads"]) == 39
+    assert (
+        create_changeset(
+            before_multi_gpkg, after_multi_gpkg, out, ["roads", "road_starts"]
+        )
+        == 71
+    )

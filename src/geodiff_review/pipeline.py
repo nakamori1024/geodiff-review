@@ -1,5 +1,6 @@
 import tempfile
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 
 from geodiff_review.diff import create_changeset, list_changes
@@ -13,10 +14,11 @@ def compute_diff(
     names_map: dict[str, list[str]],
     pk_map: dict[str, str | None],
     geom_map: dict[str, str | None],
+    tables: Sequence[str] | None = None,
 ) -> list[dict]:
     with tempfile.TemporaryDirectory() as tmpdir:
         changeset = Path(tmpdir) / "changeset.bin"
-        count = create_changeset(before, after, changeset)
+        count = create_changeset(before, after, changeset, tables=tables)
         if count == 0:
             return []
         changes = list_changes(changeset)
