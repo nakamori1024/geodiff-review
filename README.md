@@ -39,6 +39,7 @@ This generates `review.html` with:
 | `--before` | GeoPackage before changes (required) |
 | `--after` | GeoPackage after changes (required) |
 | `-o`, `--output` | Output HTML path (default: `review.html`) |
+| `--table TABLE` | Limit comparison to the given table (can be repeated) |
 | `--json` | Also write the normalized diff as JSON |
 | `--open` | Open the generated HTML in a browser |
 
@@ -50,6 +51,9 @@ uv run geodiff-review --before before.gpkg --after after.gpkg --open
 
 # Also export JSON
 uv run geodiff-review --before before.gpkg --after after.gpkg --json diff.json
+
+# Compare specific tables only
+uv run geodiff-review --before before.gpkg --after after.gpkg --table roads --table road_starts
 ```
 
 ## Supported geometry types
