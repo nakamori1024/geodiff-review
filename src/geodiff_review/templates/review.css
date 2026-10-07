@@ -20,3 +20,4 @@ tr.del:not(.pair-end) td { border-bottom-color: #d0d7de; }
 .table-panel[hidden] { display: none; }
 tr[data-pk] { cursor: pointer; }
 tr.selected td:first-child { box-shadow: inset 4px 0 0 #0969da; }
+.empty { margin: 0; padding: 16px; color: #57606a; font-size: 16px; }
