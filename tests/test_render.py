@@ -39,6 +39,13 @@ def test_render_html_contains_rows(before_gpkg, after_gpkg):
     assert not re.search(r"__[A-Z][A-Z_]*__", out)
 
 
+def test_render_no_changes():
+    out = render_html([], {}, {}, {})
+    assert "No changes." in out
+    assert "<button" not in out
+    assert 'id="map"' not in out
+
+
 def test_render_multi_layers(before_multi_gpkg, after_multi_gpkg):
     schema = read_schema(before_multi_gpkg)
     names_map, pk_map, geom_map, kind_map = _build_maps(schema)
