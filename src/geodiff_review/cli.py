@@ -79,6 +79,23 @@ def main(argv=None) -> int:
         before_schema = [s for s in before_schema if s["table"] in args.tables]
         after_schema = [s for s in after_schema if s["table"] in args.tables]
 
+    # Check for table mismatch between the two GeoPackages
+    before_tables = {s["table"] for s in before_schema}
+    after_tables = {s["table"] for s in after_schema}
+    if before_tables != after_tables:
+        only_before = sorted(before_tables - after_tables)
+        only_after = sorted(after_tables - before_tables)
+        common = sorted(before_tables & after_tables)
+        print("error: table sets do not match between the two GeoPackages")
+        if only_before:
+            print(f"  only in --before: {', '.join(only_before)}")
+        if only_after:
+            print(f"  only in --after: {', '.join(only_after)}")
+        if common:
+            hint = " ".join(f"--table {t}" for t in common)
+            print(f"hint: use {hint} to compare common tables only")
+        return 1
+
     print(f"before: {args.before} ({len(before_schema)} tables)")
     print(f"after : {args.after} ({len(after_schema)} tables)")
 
