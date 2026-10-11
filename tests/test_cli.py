@@ -46,6 +46,38 @@ def test_no_changes(before_gpkg, tmp_path):
     assert json.loads(json_path.read_text(encoding="utf-8")) == []
 
 
+def test_table_mismatch(before_gpkg, after_multi_gpkg, tmp_path):
+    rc = main(
+        [
+            "--before",
+            str(before_gpkg),
+            "--after",
+            str(after_multi_gpkg),
+            "-o",
+            str(tmp_path / "r.html"),
+        ]
+    )
+    assert rc == 1
+
+
+def test_table_mismatch_with_filter(before_gpkg, after_multi_gpkg, tmp_path):
+    out = tmp_path / "r.html"
+    rc = main(
+        [
+            "--before",
+            str(before_gpkg),
+            "--after",
+            str(after_multi_gpkg),
+            "--table",
+            "roads",
+            "-o",
+            str(out),
+        ]
+    )
+    assert rc == 0
+    assert out.exists()
+
+
 def test_unknown_table(before_multi_gpkg, after_multi_gpkg, tmp_path):
     rc = main(
         [
