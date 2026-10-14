@@ -117,8 +117,12 @@ def main(argv=None) -> int:
 
     # Write normalized diff as JSON if requested
     if args.json_path:
+        output = {
+            "format_version": 1,
+            "changes": normalized,
+        }
         args.json_path.write_text(
-            json.dumps(normalized, ensure_ascii=False, indent=2),
+            json.dumps(output, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         print(f"json: {args.json_path}")
