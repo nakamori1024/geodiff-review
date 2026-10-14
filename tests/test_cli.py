@@ -44,8 +44,14 @@ def test_no_changes(before_gpkg, tmp_path):
     assert rc == 0
     assert "No changes." in html_path.read_text(encoding="utf-8")
     data = json.loads(json_path.read_text(encoding="utf-8"))
-    assert data["format_version"] == 1
+    assert data["format_version"] == 2
     assert data["changes"] == []
+    assert "roads" in data["tables"]
+    roads = data["tables"]["roads"]
+    assert roads["primary_key"] == "id"
+    assert roads["geometry"]["column"] == "geom"
+    assert roads["geometry"]["type"] == "MULTILINESTRING"
+    assert {"name": "id", "type": "integer"} in roads["columns"]
 
 
 def test_table_mismatch(before_gpkg, after_multi_gpkg, tmp_path):
