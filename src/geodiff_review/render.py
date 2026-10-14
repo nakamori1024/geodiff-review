@@ -4,7 +4,7 @@ import re
 from importlib.resources import files
 
 MAX_LEN = 20
-MAPLIBRE_VERSION = "5.4.0"
+MAPLIBRE_VERSION = "5.24.0"
 BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron"
 
 _TEMPLATES = files("geodiff_review") / "templates"
