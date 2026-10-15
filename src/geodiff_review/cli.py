@@ -28,6 +28,7 @@ def _build_tables_meta(schemas):
             geom_info = {
                 "column": geom_col,
                 "type": col.get("geometry", {}).get("type"),
+                "srs_id": s.get("crs", {}).get("srs_id"),
             }
 
         tables[s["table"]] = {
