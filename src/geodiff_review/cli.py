@@ -141,10 +141,15 @@ def main(argv=None) -> int:
 
     # Write normalized diff as JSON if requested
     if args.json_path:
+        tables = _build_tables_meta(before_schema)
+        for table_name in tables:
+            tables[table_name]["changes"] = []
+        for entry in normalized:
+            change = {k: v for k, v in entry.items() if k != "table"}
+            tables[entry["table"]]["changes"].append(change)
         output = {
             "format_version": 2,
-            "tables": _build_tables_meta(before_schema),
-            "changes": normalized,
+            "tables": tables,
         }
         args.json_path.write_text(
             json.dumps(output, ensure_ascii=False, indent=2),
