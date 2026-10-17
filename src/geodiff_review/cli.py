@@ -13,6 +13,8 @@ from geodiff_review.normalize import (
 from geodiff_review.pipeline import compute_diff, summarize
 from geodiff_review.render import render_html
 
+_UNDEFINED_CRS = {("NONE", -1), ("NONE", 0), ("GDAL", 99999)}
+
 
 def _build_tables_meta(schemas):
     tables = {}
@@ -26,11 +28,13 @@ def _build_tables_meta(schemas):
         if geom_col:
             col = next(c for c in s["columns"] if c["name"] == geom_col)
             crs = s.get("crs")
+            auth_name = (crs or {}).get("auth_name")
+            auth_code = (crs or {}).get("auth_code")
             crs_info = None
-            if crs and crs.get("auth_name"):
+            if auth_name and (auth_name.upper(), auth_code) not in _UNDEFINED_CRS:
                 crs_info = {
-                    "auth_name": crs["auth_name"],
-                    "auth_code": crs["auth_code"],
+                    "auth_name": auth_name,
+                    "auth_code": auth_code,
                 }
             geom_info = {
                 "column": geom_col,
