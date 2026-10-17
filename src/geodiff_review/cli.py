@@ -3,15 +3,19 @@ import json
 import webbrowser
 from pathlib import Path
 
-from geodiff_review.inspect import crs_authority, read_schema
+from geodiff_review.inspect import crs_authority
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
     geometry_kind,
-    primary_key_name,
 )
 from geodiff_review.output import build_output
-from geodiff_review.pipeline import compute_diff, summarize
+from geodiff_review.pipeline import (
+    TableMismatchError,
+    TableNotFoundError,
+    prepare_diff,
+    summarize,
+)
 from geodiff_review.render import render_html
 
 
@@ -55,7 +59,6 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> int:
-    # Parse arguments and validate input paths
     args = parse_args(argv)
 
     for label, path in (("--before", args.before), ("--after", args.after)):
@@ -63,54 +66,38 @@ def main(argv=None) -> int:
             print(f"error: {label} not found: {path}")
             return 1
 
-    # Read schemas from both GeoPackages
-    before_schema = read_schema(args.before)
-    after_schema = read_schema(args.after)
-
-    # Validate and filter by --table if specified
-    if args.tables:
-        available = {s["table"] for s in before_schema} & {
-            s["table"] for s in after_schema
-        }
-        unknown = [t for t in args.tables if t not in available]
-        if unknown:
-            print(f"error: table not found: {', '.join(unknown)}")
-            print(f"available tables: {', '.join(sorted(available))}")
-            return 1
-        before_schema = [s for s in before_schema if s["table"] in args.tables]
-        after_schema = [s for s in after_schema if s["table"] in args.tables]
-
-    # Check for table mismatch between the two GeoPackages
-    before_tables = {s["table"] for s in before_schema}
-    after_tables = {s["table"] for s in after_schema}
-    if before_tables != after_tables:
-        only_before = sorted(before_tables - after_tables)
-        only_after = sorted(after_tables - before_tables)
-        common = sorted(before_tables & after_tables)
+    try:
+        before_schema, normalized = prepare_diff(
+            args.before, args.after, tables=args.tables
+        )
+    except FileNotFoundError as e:
+        print(f"error: file not found: {e}")
+        return 1
+    except TableNotFoundError as e:
+        print(f"error: table not found: {', '.join(e.unknown)}")
+        print(f"available tables: {', '.join(e.available)}")
+        return 1
+    except TableMismatchError as e:
         print("error: table sets do not match between the two GeoPackages")
-        if only_before:
-            print(f"  only in --before: {', '.join(only_before)}")
-        if only_after:
-            print(f"  only in --after: {', '.join(only_after)}")
-        if common:
-            hint = " ".join(f"--table {t}" for t in common)
+        if e.only_before:
+            print(f"  only in --before: {', '.join(e.only_before)}")
+        if e.only_after:
+            print(f"  only in --after: {', '.join(e.only_after)}")
+        if e.common:
+            hint = " ".join(f"--table {t}" for t in e.common)
             print(f"hint: use {hint} to compare common tables only")
         return 1
 
-    print(f"before: {args.before} ({len(before_schema)} tables)")
-    print(f"after : {args.after} ({len(after_schema)} tables)")
+    n_tables = len(before_schema)
+    print(f"before: {args.before} ({n_tables} tables)")
+    print(f"after : {args.after} ({n_tables} tables)")
 
-    # Build lookup maps for column names, primary keys, and geometry per table
+    # Build lookup maps for HTML rendering
     names_map = {s["table"]: column_names(s) for s in before_schema}
-    pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
     geom_map = {s["table"]: geometry_column_name(s) for s in before_schema}
     kind_map = {s["table"]: geometry_kind(s) for s in before_schema}
     crs_map = {s["table"]: crs_authority(s) for s in before_schema}
 
-    # Compute and normalize diff between the two GeoPackages
-    normalized = compute_diff(
-        args.before, args.after, names_map, pk_map, geom_map, tables=args.tables
-    )
     print(f"changes: {len(normalized)}")
 
     # Print summary grouped by table and change type
