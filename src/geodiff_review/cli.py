@@ -3,7 +3,7 @@ import json
 import webbrowser
 from pathlib import Path
 
-from geodiff_review.inspect import read_schema
+from geodiff_review.inspect import crs_authority, read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
@@ -12,20 +12,6 @@ from geodiff_review.normalize import (
 )
 from geodiff_review.pipeline import compute_diff, summarize
 from geodiff_review.render import render_html
-
-_UNDEFINED_CRS = {("NONE", -1), ("NONE", 0), ("GDAL", 99999)}
-
-
-def _crs_authority(schema: dict) -> tuple[str, int] | None:
-    crs = schema.get("crs")
-    if not crs:
-        return None
-    auth_name = crs.get("auth_name")
-    auth_code = crs.get("auth_code")
-    if not auth_name or (auth_name.upper(), auth_code) in _UNDEFINED_CRS:
-        return None
-    return (auth_name, auth_code)
-
 
 def _build_tables_meta(schemas):
     tables = {}
@@ -38,7 +24,7 @@ def _build_tables_meta(schemas):
         geom_info = None
         if geom_col:
             col = next(c for c in s["columns"] if c["name"] == geom_col)
-            authority = _crs_authority(s)
+            authority = crs_authority(s)
             crs_info = (
                 {"auth_name": authority[0], "auth_code": authority[1]}
                 if authority
@@ -148,7 +134,7 @@ def main(argv=None) -> int:
     pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
     geom_map = {s["table"]: geometry_column_name(s) for s in before_schema}
     kind_map = {s["table"]: geometry_kind(s) for s in before_schema}
-    crs_map = {s["table"]: _crs_authority(s) for s in before_schema}
+    crs_map = {s["table"]: crs_authority(s) for s in before_schema}
 
     # Compute and normalize diff between the two GeoPackages
     normalized = compute_diff(
