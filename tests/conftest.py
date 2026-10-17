@@ -1,8 +1,12 @@
 import warnings
 from pathlib import Path
 
+import numpy as np
 import pytest
 from pyogrio.raw import read, write
+from pyproj import Transformer
+from shapely import from_wkb, to_wkb
+from shapely.ops import transform
 
 from scripts.build_gpkg import geojson_to_gpkg, geojson_to_multi_gpkg
 
@@ -56,4 +60,41 @@ def no_crs_gpkg(tmp_path_factory):
             crs=None,
             layer_options={"FID": "id"},
         )
+    return dst
+
+
+def _reproject_gpkg(src_geojson, dst, target_crs="EPSG:6669"):
+    """Read a GeoJSON and write a GeoPackage reprojected to target_crs."""
+    meta, _, geom, fdata = read(src_geojson)
+    transformer = Transformer.from_crs(meta["crs"], target_crs, always_xy=True)
+    projected = np.array(
+        [to_wkb(transform(transformer.transform, from_wkb(g))) for g in geom],
+        dtype=object,
+    )
+    write(
+        dst,
+        projected,
+        fdata,
+        fields=meta["fields"],
+        layer="roads",
+        driver="GPKG",
+        geometry_type=meta["geometry_type"],
+        crs=target_crs,
+        layer_options={"FID": "id"},
+    )
+
+
+@pytest.fixture(scope="session")
+def projected_before_gpkg(tmp_path_factory):
+    """GeoPackage in EPSG:6669 (Japan Plane Rectangular CS I)."""
+    dst = tmp_path_factory.mktemp("gpkg") / "projected_before.gpkg"
+    _reproject_gpkg(DATA / "sapporo_chuo_roads_2023.geojson", dst)
+    return dst
+
+
+@pytest.fixture(scope="session")
+def projected_after_gpkg(tmp_path_factory):
+    """GeoPackage in EPSG:6669 (Japan Plane Rectangular CS I)."""
+    dst = tmp_path_factory.mktemp("gpkg") / "projected_after.gpkg"
+    _reproject_gpkg(DATA / "sapporo_chuo_roads_2025.geojson", dst)
     return dst

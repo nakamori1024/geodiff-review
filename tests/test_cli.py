@@ -121,3 +121,41 @@ def test_unknown_table(before_multi_gpkg, after_multi_gpkg, tmp_path):
         ]
     )
     assert rc == 1
+
+
+def test_projected_json_preserves_source_coords(
+    projected_before_gpkg, projected_after_gpkg, tmp_path
+):
+    json_path = tmp_path / "d.json"
+    rc = main(
+        [
+            "--before",
+            str(projected_before_gpkg),
+            "--after",
+            str(projected_after_gpkg),
+            "-o",
+            str(tmp_path / "r.html"),
+            "--json",
+            str(json_path),
+        ]
+    )
+    assert rc == 0
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    roads = data["tables"]["roads"]
+    assert roads["geometry"]["crs"] == {"auth_name": "EPSG", "auth_code": 6669}
+
+    # Coordinates in JSON should remain in projected CRS (not lon/lat)
+    for change in roads["changes"]:
+        for side in ("before", "after"):
+            row = change.get("row", {}).get(side)
+            if row and row.get("geom"):
+                _assert_projected(row["geom"]["coordinates"])
+
+
+def _assert_projected(coords):
+    """Assert coords are in projected CRS (large values, not lon/lat)."""
+    if isinstance(coords[0], (int, float)):
+        assert abs(coords[0]) > 1000 or abs(coords[1]) > 1000
+    else:
+        for c in coords:
+            _assert_projected(c)

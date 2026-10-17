@@ -1,6 +1,7 @@
 import json
 import re
 
+from geodiff_review.cli import _crs_authority
 from geodiff_review.inspect import read_schema
 from geodiff_review.normalize import (
     column_names,
@@ -74,3 +75,62 @@ def test_render_multi_layers(before_multi_gpkg, after_multi_gpkg):
     assert out.count(" hidden>") == 2
 
     assert not re.search(r"__[A-Z][A-Z_]*__", out)
+
+
+def _assert_lonlat(coords):
+    """Recursively assert coordinates are in lon/lat range."""
+    if isinstance(coords[0], (int, float)):
+        lon, lat = coords[0], coords[1]
+        assert 120 < lon < 150, f"lon {lon} out of range"
+        assert 30 < lat < 50, f"lat {lat} out of range"
+    else:
+        for c in coords:
+            _assert_lonlat(c)
+
+
+def test_render_projected_crs_produces_lonlat(
+    projected_before_gpkg, projected_after_gpkg
+):
+    schema = read_schema(projected_before_gpkg)
+    names_map, pk_map, geom_map, kind_map = _build_maps(schema)
+    crs_map = {s["table"]: _crs_authority(s) for s in schema}
+
+    normalized = compute_diff(
+        projected_before_gpkg, projected_after_gpkg, names_map, pk_map, geom_map
+    )
+    out = render_html(normalized, names_map, geom_map, kind_map, crs_map)
+
+    m = re.search(
+        r'<script id="geodiff-data" type="application/json">(.*?)</script>',
+        out,
+        re.DOTALL,
+    )
+    assert m is not None
+    data = json.loads(m.group(1))
+    assert data["map"] is not None
+    for layer in data["map"]["layers"]:
+        for side in ("before", "after"):
+            for feature in layer[side]["features"]:
+                _assert_lonlat(feature["geometry"]["coordinates"])
+
+
+def test_render_no_crs_skips_map():
+    entries = [
+        {
+            "table": "t",
+            "type": "insert",
+            "pk": {"column": "id", "value": 1},
+            "row": {
+                "after": {"id": 1, "geom": {"type": "Point", "coordinates": [0, 0]}}
+            },
+            "changed_columns": ["geom"],
+        }
+    ]
+    out = render_html(
+        entries,
+        {"t": ["id", "geom"]},
+        {"t": "geom"},
+        {"t": "point"},
+        {"t": None},
+    )
+    assert 'id="map"' not in out

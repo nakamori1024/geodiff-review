@@ -16,6 +16,17 @@ from geodiff_review.render import render_html
 _UNDEFINED_CRS = {("NONE", -1), ("NONE", 0), ("GDAL", 99999)}
 
 
+def _crs_authority(schema: dict) -> tuple[str, int] | None:
+    crs = schema.get("crs")
+    if not crs:
+        return None
+    auth_name = crs.get("auth_name")
+    auth_code = crs.get("auth_code")
+    if not auth_name or (auth_name.upper(), auth_code) in _UNDEFINED_CRS:
+        return None
+    return (auth_name, auth_code)
+
+
 def _build_tables_meta(schemas):
     tables = {}
     for s in schemas:
@@ -27,15 +38,12 @@ def _build_tables_meta(schemas):
         geom_info = None
         if geom_col:
             col = next(c for c in s["columns"] if c["name"] == geom_col)
-            crs = s.get("crs")
-            auth_name = (crs or {}).get("auth_name")
-            auth_code = (crs or {}).get("auth_code")
-            crs_info = None
-            if auth_name and (auth_name.upper(), auth_code) not in _UNDEFINED_CRS:
-                crs_info = {
-                    "auth_name": auth_name,
-                    "auth_code": auth_code,
-                }
+            authority = _crs_authority(s)
+            crs_info = (
+                {"auth_name": authority[0], "auth_code": authority[1]}
+                if authority
+                else None
+            )
             geom_info = {
                 "column": geom_col,
                 "type": col.get("geometry", {}).get("type"),
@@ -140,6 +148,7 @@ def main(argv=None) -> int:
     pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
     geom_map = {s["table"]: geometry_column_name(s) for s in before_schema}
     kind_map = {s["table"]: geometry_kind(s) for s in before_schema}
+    crs_map = {s["table"]: _crs_authority(s) for s in before_schema}
 
     # Compute and normalize diff between the two GeoPackages
     normalized = compute_diff(
@@ -169,7 +178,7 @@ def main(argv=None) -> int:
         )
         print(f"json: {args.json_path}")
 
-    html_text = render_html(normalized, names_map, geom_map, kind_map)
+    html_text = render_html(normalized, names_map, geom_map, kind_map, crs_map)
     args.output.write_text(html_text, encoding="utf-8")
     print(f"output: {args.output}")
 
