@@ -1,8 +1,7 @@
 import json
 import re
 
-from geodiff_review.inspect import crs_authority
-from geodiff_review.inspect import read_schema
+from geodiff_review.inspect import crs_authority, read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,

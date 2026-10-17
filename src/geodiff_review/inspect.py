@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pygeodiff
 
-
 _UNDEFINED_CRS = {("NONE", -1), ("NONE", 0), ("GDAL", 99999)}
 
 
