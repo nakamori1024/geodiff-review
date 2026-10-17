@@ -61,6 +61,11 @@ def parse_args(argv=None):
 def main(argv=None) -> int:
     args = parse_args(argv)
 
+    for label, path in (("--before", args.before), ("--after", args.after)):
+        if not path.exists():
+            print(f"error: {label} not found: {path}")
+            return 1
+
     try:
         before_schema, normalized = prepare_diff(
             args.before, args.after, tables=args.tables
