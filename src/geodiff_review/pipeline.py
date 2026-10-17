@@ -87,6 +87,27 @@ def prepare_diff(
     return before_schema, normalized
 
 
+def diff_gpkg(
+    before: Path,
+    after: Path,
+    tables: Sequence[str] | None = None,
+) -> dict:
+    """Compare two GeoPackage files and return the JSON output as a dict.
+
+    This is a convenience wrapper around :func:`prepare_diff` and
+    :func:`~geodiff_review.output.build_output`.
+
+    Raises:
+        FileNotFoundError: if *before* or *after* does not exist.
+        TableNotFoundError: if a requested table is not in both files.
+        TableMismatchError: if the table sets differ between the two files.
+    """
+    from geodiff_review.output import build_output
+
+    schemas, normalized = prepare_diff(before, after, tables=tables)
+    return build_output(schemas, normalized)
+
+
 def compute_diff(
     before: Path,
     after: Path,

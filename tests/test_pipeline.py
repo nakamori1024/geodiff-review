@@ -1,12 +1,19 @@
 from collections import Counter
 
+import pytest
+
 from geodiff_review.inspect import read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
     primary_key_name,
 )
-from geodiff_review.pipeline import compute_diff
+from geodiff_review.pipeline import (
+    TableMismatchError,
+    TableNotFoundError,
+    compute_diff,
+    diff_gpkg,
+)
 
 
 def test_compute_diff_includes_rows(before_gpkg, after_gpkg):
@@ -47,3 +54,45 @@ def test_compute_diff_multi_table(before_multi_gpkg, after_multi_gpkg):
     assert by_table["roads"] == 39
     assert by_table["road_buffers"] == 39
     assert by_table["road_starts"] == 32
+
+
+def test_diff_gpkg(before_gpkg, after_gpkg):
+    result = diff_gpkg(before_gpkg, after_gpkg)
+    assert result["format_version"] == 2
+    assert "roads" in result["tables"]
+    roads = result["tables"]["roads"]
+    assert roads["primary_key"] == "id"
+    assert len(roads["changes"]) == 39
+    for change in roads["changes"]:
+        assert "table" not in change
+
+
+def test_diff_gpkg_no_changes(before_gpkg):
+    result = diff_gpkg(before_gpkg, before_gpkg)
+    assert result["tables"]["roads"]["changes"] == []
+
+
+def test_diff_gpkg_with_table_filter(before_multi_gpkg, after_multi_gpkg):
+    result = diff_gpkg(before_multi_gpkg, after_multi_gpkg, tables=["roads"])
+    assert list(result["tables"].keys()) == ["roads"]
+    assert len(result["tables"]["roads"]["changes"]) == 39
+
+
+def test_diff_gpkg_file_not_found(tmp_path):
+    missing = tmp_path / "missing.gpkg"
+    with pytest.raises(FileNotFoundError):
+        diff_gpkg(missing, missing)
+
+
+def test_diff_gpkg_table_not_found(before_multi_gpkg, after_multi_gpkg):
+    with pytest.raises(TableNotFoundError) as exc_info:
+        diff_gpkg(before_multi_gpkg, after_multi_gpkg, tables=["nope"])
+    assert "nope" in exc_info.value.unknown
+    assert "roads" in exc_info.value.available
+
+
+def test_diff_gpkg_table_mismatch(before_gpkg, after_multi_gpkg):
+    with pytest.raises(TableMismatchError) as exc_info:
+        diff_gpkg(before_gpkg, after_multi_gpkg)
+    assert exc_info.value.only_after
+    assert "roads" in exc_info.value.common
