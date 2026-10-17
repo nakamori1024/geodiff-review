@@ -148,6 +148,7 @@ def main(argv=None) -> int:
     pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
     geom_map = {s["table"]: geometry_column_name(s) for s in before_schema}
     kind_map = {s["table"]: geometry_kind(s) for s in before_schema}
+    crs_map = {s["table"]: _crs_authority(s) for s in before_schema}
 
     # Compute and normalize diff between the two GeoPackages
     normalized = compute_diff(
@@ -177,7 +178,7 @@ def main(argv=None) -> int:
         )
         print(f"json: {args.json_path}")
 
-    html_text = render_html(normalized, names_map, geom_map, kind_map)
+    html_text = render_html(normalized, names_map, geom_map, kind_map, crs_map)
     args.output.write_text(html_text, encoding="utf-8")
     print(f"output: {args.output}")
 

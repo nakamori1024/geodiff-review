@@ -1,3 +1,4 @@
+from pyproj import Transformer
 from shapely import from_wkb
 from shapely.geometry import mapping
 
@@ -16,3 +17,27 @@ def decode_gpkg_bytes(raw: bytes) -> dict | None:
         return None
 
     return mapping(from_wkb(raw[8 + _ENVELOPE_SIZE[envelope] :]))
+
+
+def make_transformer(auth_name: str, auth_code: int) -> Transformer | None:
+    if auth_name.upper() == "EPSG" and auth_code == 4326:
+        return None
+    return Transformer.from_crs(f"{auth_name}:{auth_code}", "EPSG:4326", always_xy=True)
+
+
+def transform_geom(geom: dict, transformer: Transformer | None) -> dict:
+    if transformer is None:
+        return geom
+    return {
+        "type": geom["type"],
+        "coordinates": _transform_coords(geom["coordinates"], transformer),
+    }
+
+
+def _transform_coords(coords, transformer: Transformer):
+    if isinstance(coords[0], (int, float)):
+        x, y = transformer.transform(coords[0], coords[1])
+        if len(coords) > 2:
+            return [x, y, coords[2]]
+        return [x, y]
+    return [_transform_coords(c, transformer) for c in coords]

@@ -3,6 +3,10 @@ import json
 import re
 from importlib.resources import files
 
+from pyproj import Transformer
+
+from geodiff_review.geometry import make_transformer, transform_geom
+
 MAX_LEN = 20
 MAPLIBRE_VERSION = "5.24.0"
 BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron"
@@ -41,7 +45,10 @@ def _rows_for(entry: dict) -> list[tuple[str, str, dict]]:
 
 
 def _feature_collections(
-    entries: list[dict], table: str, geom_col: str
+    entries: list[dict],
+    table: str,
+    geom_col: str,
+    transformer: Transformer | None = None,
 ) -> tuple[dict, dict]:
     before_features: list[dict] = []
     after_features: list[dict] = []
@@ -55,7 +62,7 @@ def _feature_collections(
                 bucket.append(
                     {
                         "type": "Feature",
-                        "geometry": row[geom_col],
+                        "geometry": transform_geom(row[geom_col], transformer),
                         "properties": {
                             "table": table,
                             "pk": pk,
@@ -84,6 +91,7 @@ def render_html(
     names_map: dict[str, list[str]],
     geom_map: dict[str, str | None] | None = None,
     kind_map: dict[str, str | None] | None = None,
+    crs_map: dict[str, tuple[str, int] | None] | None = None,
 ) -> str:
     tables: dict[str, list[dict]] = {}
     for e in entries:
@@ -159,7 +167,13 @@ def render_html(
             kind = kind_map.get(table) if kind_map else None
             if not geom_col or kind is None:
                 continue
-            before_fc, after_fc = _feature_collections(entries, table, geom_col)
+            crs = crs_map.get(table) if crs_map else None
+            if crs_map is not None and crs is None:
+                continue
+            transformer = make_transformer(*crs) if crs else None
+            before_fc, after_fc = _feature_collections(
+                entries, table, geom_col, transformer
+            )
             layers.append(
                 {
                     "table": table,
