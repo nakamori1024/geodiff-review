@@ -49,5 +49,5 @@ def normalize_entry(entry: dict, names: list[str], pk: str | None = None) -> dic
         "type": entry["type"],
         "pk": {"column": pk, "value": pk_value} if pk else None,
         "row": None,
-        "changes": changed,
+        "changed_columns": changed,
     }

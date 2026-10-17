@@ -121,7 +121,7 @@ def render_html(
             t = html.escape(table)
             for entry in sorted(group, key=lambda e: e["pk"]["value"]):
                 pk = html.escape(str(entry["pk"]["value"]))
-                changed = set(entry["changes"])
+                changed = set(entry["changed_columns"])
                 if entry["type"] in ("insert", "delete"):
                     changed.add(entry["pk"]["column"])
                 rows = _rows_for(entry)

@@ -14,6 +14,31 @@ from geodiff_review.pipeline import compute_diff, summarize
 from geodiff_review.render import render_html
 
 
+def _build_tables_meta(schemas):
+    tables = {}
+    for s in schemas:
+        pk = primary_key_name(s)
+        geom_col = geometry_column_name(s)
+
+        columns = [{"name": c["name"], "type": c["type"]} for c in s["columns"]]
+
+        geom_info = None
+        if geom_col:
+            col = next(c for c in s["columns"] if c["name"] == geom_col)
+            geom_info = {
+                "column": geom_col,
+                "type": col.get("geometry", {}).get("type"),
+                "srs_id": s.get("crs", {}).get("srs_id"),
+            }
+
+        tables[s["table"]] = {
+            "columns": columns,
+            "primary_key": pk,
+            "geometry": geom_info,
+        }
+    return tables
+
+
 def parse_args(argv=None):
     p = argparse.ArgumentParser(
         prog="geodiff-review",
@@ -117,8 +142,18 @@ def main(argv=None) -> int:
 
     # Write normalized diff as JSON if requested
     if args.json_path:
+        tables = _build_tables_meta(before_schema)
+        for table_name in tables:
+            tables[table_name]["changes"] = []
+        for entry in normalized:
+            change = {k: v for k, v in entry.items() if k != "table"}
+            tables[entry["table"]]["changes"].append(change)
+        output = {
+            "format_version": 2,
+            "tables": tables,
+        }
         args.json_path.write_text(
-            json.dumps(normalized, ensure_ascii=False, indent=2),
+            json.dumps(output, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         print(f"json: {args.json_path}")
