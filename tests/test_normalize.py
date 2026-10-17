@@ -40,9 +40,11 @@ def test_normalize_entry_update(before_gpkg, after_gpkg, tmp_path):
     normalized = [normalize_entry(e, names, pk) for e in list_changes(out)]
 
     target = [
-        e for e in normalized if e["type"] == "update" and "width_max" in e["changes"]
+        e
+        for e in normalized
+        if e["type"] == "update" and "width_max" in e["changed_columns"]
     ]
     assert len(target) == 1
     assert target[0]["pk"] == {"column": "id", "value": 511}
-    assert target[0]["changes"] == ["width_max"]
-    assert "id" not in target[0]["changes"]
+    assert target[0]["changed_columns"] == ["width_max"]
+    assert "id" not in target[0]["changed_columns"]
