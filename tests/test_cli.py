@@ -50,7 +50,7 @@ def test_no_changes(before_gpkg, tmp_path):
     assert roads["primary_key"] == "id"
     assert roads["geometry"]["column"] == "geom"
     assert roads["geometry"]["type"] == "MULTILINESTRING"
-    assert roads["geometry"]["srs_id"] == 4326
+    assert roads["geometry"]["crs"] == {"auth_name": "EPSG", "auth_code": 4326}
     assert {"name": "id", "type": "integer"} in roads["columns"]
     assert roads["changes"] == []
 
@@ -85,6 +85,26 @@ def test_table_mismatch_with_filter(before_gpkg, after_multi_gpkg, tmp_path):
     )
     assert rc == 0
     assert out.exists()
+
+
+def test_no_crs_outputs_null(no_crs_gpkg, tmp_path):
+    json_path = tmp_path / "d.json"
+    rc = main(
+        [
+            "--before",
+            str(no_crs_gpkg),
+            "--after",
+            str(no_crs_gpkg),
+            "-o",
+            str(tmp_path / "r.html"),
+            "--json",
+            str(json_path),
+        ]
+    )
+    assert rc == 0
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    roads = data["tables"]["roads"]
+    assert roads["geometry"]["crs"] is None
 
 
 def test_unknown_table(before_multi_gpkg, after_multi_gpkg, tmp_path):
