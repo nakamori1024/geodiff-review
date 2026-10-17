@@ -39,8 +39,8 @@ class TableMismatchError(GeodiffReviewError):
 
 
 def prepare_diff(
-    before: Path,
-    after: Path,
+    before: str | Path,
+    after: str | Path,
     tables: Sequence[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Read schemas, validate tables, and compute the normalized diff.
@@ -53,6 +53,8 @@ def prepare_diff(
         TableNotFoundError: if a requested table is not in both files.
         TableMismatchError: if the table sets differ between the two files.
     """
+    before = Path(before)
+    after = Path(after)
     for path in (before, after):
         if not path.exists():
             raise FileNotFoundError(path)
@@ -88,8 +90,8 @@ def prepare_diff(
 
 
 def diff_gpkg(
-    before: Path,
-    after: Path,
+    before: str | Path,
+    after: str | Path,
     tables: Sequence[str] | None = None,
 ) -> dict:
     """Compare two GeoPackage files and return the JSON output as a dict.

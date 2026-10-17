@@ -78,8 +78,20 @@ def test_diff_gpkg_with_table_filter(before_multi_gpkg, after_multi_gpkg):
     assert len(result["tables"]["roads"]["changes"]) == 39
 
 
+def test_diff_gpkg_str_paths(before_gpkg, after_gpkg):
+    result = diff_gpkg(str(before_gpkg), str(after_gpkg))
+    assert result["format_version"] == 2
+    assert len(result["tables"]["roads"]["changes"]) == 39
+
+
 def test_diff_gpkg_file_not_found(tmp_path):
     missing = tmp_path / "missing.gpkg"
+    with pytest.raises(FileNotFoundError):
+        diff_gpkg(missing, missing)
+
+
+def test_diff_gpkg_file_not_found_str(tmp_path):
+    missing = str(tmp_path / "missing.gpkg")
     with pytest.raises(FileNotFoundError):
         diff_gpkg(missing, missing)
 
