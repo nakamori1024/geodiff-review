@@ -1,8 +1,7 @@
 import json
 import re
 
-from geodiff_review.cli import _crs_authority
-from geodiff_review.inspect import read_schema
+from geodiff_review.inspect import crs_authority, read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
@@ -93,7 +92,7 @@ def test_render_projected_crs_produces_lonlat(
 ):
     schema = read_schema(projected_before_gpkg)
     names_map, pk_map, geom_map, kind_map = _build_maps(schema)
-    crs_map = {s["table"]: _crs_authority(s) for s in schema}
+    crs_map = {s["table"]: crs_authority(s) for s in schema}
 
     normalized = compute_diff(
         projected_before_gpkg, projected_after_gpkg, names_map, pk_map, geom_map

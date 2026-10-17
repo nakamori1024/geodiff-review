@@ -3,59 +3,16 @@ import json
 import webbrowser
 from pathlib import Path
 
-from geodiff_review.inspect import read_schema
+from geodiff_review.inspect import crs_authority, read_schema
 from geodiff_review.normalize import (
     column_names,
     geometry_column_name,
     geometry_kind,
     primary_key_name,
 )
+from geodiff_review.output import build_output
 from geodiff_review.pipeline import compute_diff, summarize
 from geodiff_review.render import render_html
-
-_UNDEFINED_CRS = {("NONE", -1), ("NONE", 0), ("GDAL", 99999)}
-
-
-def _crs_authority(schema: dict) -> tuple[str, int] | None:
-    crs = schema.get("crs")
-    if not crs:
-        return None
-    auth_name = crs.get("auth_name")
-    auth_code = crs.get("auth_code")
-    if not auth_name or (auth_name.upper(), auth_code) in _UNDEFINED_CRS:
-        return None
-    return (auth_name, auth_code)
-
-
-def _build_tables_meta(schemas):
-    tables = {}
-    for s in schemas:
-        pk = primary_key_name(s)
-        geom_col = geometry_column_name(s)
-
-        columns = [{"name": c["name"], "type": c["type"]} for c in s["columns"]]
-
-        geom_info = None
-        if geom_col:
-            col = next(c for c in s["columns"] if c["name"] == geom_col)
-            authority = _crs_authority(s)
-            crs_info = (
-                {"auth_name": authority[0], "auth_code": authority[1]}
-                if authority
-                else None
-            )
-            geom_info = {
-                "column": geom_col,
-                "type": col.get("geometry", {}).get("type"),
-                "crs": crs_info,
-            }
-
-        tables[s["table"]] = {
-            "columns": columns,
-            "primary_key": pk,
-            "geometry": geom_info,
-        }
-    return tables
 
 
 def parse_args(argv=None):
@@ -148,7 +105,7 @@ def main(argv=None) -> int:
     pk_map = {s["table"]: primary_key_name(s) for s in before_schema}
     geom_map = {s["table"]: geometry_column_name(s) for s in before_schema}
     kind_map = {s["table"]: geometry_kind(s) for s in before_schema}
-    crs_map = {s["table"]: _crs_authority(s) for s in before_schema}
+    crs_map = {s["table"]: crs_authority(s) for s in before_schema}
 
     # Compute and normalize diff between the two GeoPackages
     normalized = compute_diff(
@@ -162,16 +119,7 @@ def main(argv=None) -> int:
 
     # Write normalized diff as JSON if requested
     if args.json_path:
-        tables = _build_tables_meta(before_schema)
-        for table_name in tables:
-            tables[table_name]["changes"] = []
-        for entry in normalized:
-            change = {k: v for k, v in entry.items() if k != "table"}
-            tables[entry["table"]]["changes"].append(change)
-        output = {
-            "format_version": 2,
-            "tables": tables,
-        }
+        output = build_output(before_schema, normalized)
         args.json_path.write_text(
             json.dumps(output, ensure_ascii=False, indent=2),
             encoding="utf-8",
