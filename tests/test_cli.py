@@ -50,7 +50,7 @@ def test_no_changes(before_gpkg, tmp_path):
     assert roads["primary_key"] == "id"
     assert roads["geometry"]["column"] == "geom"
     assert roads["geometry"]["type"] == "MULTILINESTRING"
-    assert roads["geometry"]["srs_id"] == 4326
+    assert roads["geometry"]["crs"] == {"auth_name": "EPSG", "auth_code": 4326}
     assert {"name": "id", "type": "integer"} in roads["columns"]
     assert roads["changes"] == []
 

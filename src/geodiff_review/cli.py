@@ -25,10 +25,17 @@ def _build_tables_meta(schemas):
         geom_info = None
         if geom_col:
             col = next(c for c in s["columns"] if c["name"] == geom_col)
+            crs = s.get("crs")
+            crs_info = None
+            if crs and crs.get("auth_name"):
+                crs_info = {
+                    "auth_name": crs["auth_name"],
+                    "auth_code": crs["auth_code"],
+                }
             geom_info = {
                 "column": geom_col,
                 "type": col.get("geometry", {}).get("type"),
-                "srs_id": s.get("crs", {}).get("srs_id"),
+                "crs": crs_info,
             }
 
         tables[s["table"]] = {
