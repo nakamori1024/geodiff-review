@@ -40,7 +40,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pygeodiff", specifier = "==2.3.1" },
-    { name = "pyproj", specifier = ">=3.6" },
+    { name = "pyproj", specifier = "==3.8.0" },
     { name = "shapely", specifier = "==2.1.2" },
 ]
 
