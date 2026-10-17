@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 
 import pytest
@@ -42,15 +43,17 @@ def no_crs_gpkg(tmp_path_factory):
     src = DATA / "sapporo_chuo_roads_2023.geojson"
     meta, _, geom, fdata = read(src)
     dst = tmp_path_factory.mktemp("gpkg") / "no_crs.gpkg"
-    write(
-        dst,
-        geom,
-        fdata,
-        fields=meta["fields"],
-        layer="roads",
-        driver="GPKG",
-        geometry_type=meta["geometry_type"],
-        crs=None,
-        layer_options={"FID": "id"},
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="'crs' was not provided")
+        write(
+            dst,
+            geom,
+            fdata,
+            fields=meta["fields"],
+            layer="roads",
+            driver="GPKG",
+            geometry_type=meta["geometry_type"],
+            crs=None,
+            layer_options={"FID": "id"},
+        )
     return dst
