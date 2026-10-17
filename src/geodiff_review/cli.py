@@ -88,8 +88,9 @@ def main(argv=None) -> int:
             print(f"hint: use {hint} to compare common tables only")
         return 1
 
-    print(f"before: {args.before} ({len(before_schema)} tables)")
-    print(f"after : {args.after} ({len(before_schema)} tables)")
+    n_tables = len(before_schema)
+    print(f"before: {args.before} ({n_tables} tables)")
+    print(f"after : {args.after} ({n_tables} tables)")
 
     # Build lookup maps for HTML rendering
     names_map = {s["table"]: column_names(s) for s in before_schema}
